@@ -1,120 +1,51 @@
-var svgWidth = 800;
-var svgHeight = 560;
+var imageWidth = 1000;
+var imageHeight = 500;
 
-var margin = {
-    top: 20,
-    right: 40,
-    bottom: 80,
-    left: 50
-};
+var width = 850;
+var height = 350;
 
-var width = svgWidth - margin.left - margin.right;
-var height = svgHeight - margin.top - margin.bottom;
+var scatterPlot = d3.select("#scatterplot").append("svg").attr("width", imageWidth).attr("height", imageHeight);
 
-// Create an SVG wrapper, append an SVG group that will hold our chart and shift the latter by left and top margins
-var svg = d3
-    .select("#scatter")
-    .append("svg")
-    .attr("width", svgWidth)
-    .attr("height", svgHeight);
+var transformChart = scatterPlot.append("g").attr("transform", "translate(100, 50)");
 
-// Append an SVG group
-var chartGroup = svg.append("g")
-    .attr("transform", 'translate(${margin.left}, ${margin.top})');
+d3.csv("data.csv").then(plot);
 
-d3.csv("data.csv", function(data){
-    data.poverty = +data.poverty;
-    data.healthcare = +data.healthcare;
-    return data;
-}).then(function(data) {
-    console.log(data);
+function plot(importedData) {
 
-// Create scales
-var xLinearScale = d3.scaleLinear()
-    .domain([8, d3.max(data,function(d){
-    return +d.poverty;
-    })])
-    .range([0, width]);
-
-var yLinearScale = d3.scaleLinear()
-    .domain([2, d3.max(data,function(d){
-    return +d.healthcare;
-    })])
-    .range([height, 0]);
-
-// Create axis
-var bottomAxis = d3.axisBottom(xScale);
-var leftAxis = d3.axisLeft(yScale);
-
-// Adding in bottom and left axis
-chartGroup.append("g")
-    .attr("transform", 'translate(0, ${height}')
-    .call(bottomAxis);
-chartGroup.append("g")
-    .call(leftAxis);
-
-// Data points
-var circlesGroup = chartGroup.selectAll("circle")
-    .data(data)
-    .enter()
-    .append("circle")
-    .attr("cx", (d,i) => xScale(d.poverty))
-    .attr("cy", d => yScale(d.healthcare))
-    .attr("r", "15")
-    .attr("fill", "blue")
-    .classed("stateCircle", true)
-
-// State abbreviations
-chartGroup.selectAll("text")
-    .data(data)
-    .enter()
-    .append("text")
-    .attr("x", (d,i) => xScale(d.poverty))
-    .attr("y", d => (yScale(d.healthcare-0.28)))
-    .classed("stateText", true)
-    .text(d => d.abbr)
-    .on("mouseover", function(d) {
-        toolTip.show(d);
-    })
-    .on("mouseout", function(d,i) {
-        toolTip.hide(d);
+    importedData.map(function (data) {
+        data.healthcare =+ data.healthcare;
+        data.obesity =+ data.obesity;
     });
 
-// x labels
-chartGroup.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 0 - margin.left)
-    .attr("x", 0 - height / 2)
-    .attr("dy", "1em")
-    .classed("aText", true)
-    .attr("data-axis-name", "healthcare")
-    .text("Lacks Healthcare(%)");
+    var xLinearScale = d3.scaleLinear()
+        .domain([4.6, d3.max(importedData, d => d.healthcare)])
+        .range([0, width]);
 
-// y labels
-chartGroup.append("text")
-    .attr("transform", "translate(" + width / 2 + " ," + (height + margin.top + 20) + ")")
-    .attr("data-axis-name", "poverty")
-    .classed("aText", true)
-    .text("In Poverty (%)");
+    var yLinearScale = d3.scaleLinear()
+        .domain([20, d3.max(importedData, d => d.obesity)])
+        .range([height, 0]);
 
-// ToolTip
-var toolTip = d3.tip()
-    .attr("class", "tooltip")
-    .offset([-10, 30])
-    .html(function(d) {
-        return ('${d.abbr}<br>Healthcare (%): ${d.healthcare}%<br>Poverty: ${d.poverty}');
-    });
+    var bottomAxis = d3.axisBottom(xLinearScale)
+        .ticks(7);
+    var leftAxis = d3.axisLeft(yLinearScale);
+
+    transformChart.append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(bottomAxis);
+    transformChart.append("g")
+        .call(leftAxis);
 
 
-// Integrate ToolTip into chart
-chartGroup.call(toolTip);
+    var circlesGroup = transformChart.selectAll("circle").data(importedData).enter().append("circle");
 
-// Event listener for display and hide of ToolTip
-circlesGroup.on("mouseover", function(d) {
-    toolTip.show(d);
-})
-    .on("mouseout", function(d, i){
-        toolTip.hide(d);
-    });
+        circlesGroup.attr("cx", d => xLinearScale(d.healthcare)).attr("cy", d => yLinearScale(d.obesity)).attr("r", "15");
 
-});
+    var circlesGroupText = transformChart.selectAll().data(importedData).enter().append("text");
+
+    circlesGroupText.attr("x", d => xLinearScale(d.healthcare)).attr("y", d => yLinearScale(d.obesity))
+        .style("font-size", "12px").style("text-anchor", "middle").style('fill', 'white').text(d => (d.abbr));
+
+    transformChart.append("text").attr("transform", "rotate(-90)").attr("y", -50).attr("x", -175).attr("class", "axisText").text("obesity %");
+
+    transformChart.append("text").attr("transform", "translate(350, 400)").attr("class", "axisText").text("healthcare %");
+}
